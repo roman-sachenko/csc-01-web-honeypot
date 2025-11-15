@@ -22,12 +22,25 @@ logs/
 logs/**/*
 !logs/.gitkeep
 
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
 .env*.local
 .env.production
 .env.development
+.env.*
+*.env
+secrets/
+.secrets/
+*.secret
+*secret*
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+config.json
+settings.json
 
 # IDE
 .vscode/
@@ -61,14 +74,97 @@ backup-*
 *.temp
 .cache/
 
-# SSL certificates (if any)
+# SSL certificates and keys
 *.pem
 *.key
 *.crt
 *.cert
+*.csr
+*.der
+*.p12
+*.pfx
+*.jks
+*.keystore
 
 # Editor backups
 *~
 .*.swp
 .*.swo
+*.bak
+*.orig
+
+# SSH keys and personal credentials
+.ssh/
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+known_hosts
+authorized_keys
+
+# Cloud provider credentials
+.aws/
+.gcp/
+.azure/
+credentials
+*.credentials
+aws-credentials
+gcp-credentials
+azure-credentials
+
+# Personal notes and files
+notes/
+personal/
+TODO.md
+NOTES.md
+scratch/
+draft/
+*.md.bak
+*.txt.bak
+
+# macOS personal files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Browser data and history
+.browser/
+*.history
+history/
+safari/
+chrome/
+firefox/
+
+# System and personal configs
+.config/
+*.conf.local
+*.config.local
+hosts.local
+hosts.bak
+
+# Database dumps (might contain personal data)
+*.sql
+*.dump
+*.db.backup
+*.db.bak
+
+# API keys and tokens (common patterns)
+*_api_key*
+*_API_KEY*
+*_token*
+*_TOKEN*
+*_secret*
+*_SECRET*
+*_password*
+*_PASSWORD*
+api-keys.txt
+tokens.txt
+secrets.txt
 
