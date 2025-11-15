@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production / Build
+.next/
+out/
+build/
+dist/
+
+# Data directory (database, uploads, generated files)
+data/
+!data/.gitkeep
+!data/uploads/
+!data/uploads/.gitkeep
+
+# Logs - ignore all log files and directories
+logs/
+*.log
+*.log.*
+logs/**/*
+!logs/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env*.local
+.env.production
+.env.development
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Caddy (local development only)
+Caddyfile.local
+caddy_data/
+caddy_config/
+caddy_data_local/
+caddy_config_local/
+
+# Docker volumes
+*.volume
+
+# Backups
+*.tar.gz
+*.zip
+backup-*
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# SSL certificates (if any)
+*.pem
+*.key
+*.crt
+*.cert
+
+# Editor backups
+*~
+.*.swp
+.*.swo
+

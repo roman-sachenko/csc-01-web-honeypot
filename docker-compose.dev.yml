@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  honeypot-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: truarch-honeypot-dev
+    ports:
+      - "3000:3000"  # Backend
+      - "3001:3001"  # Frontend
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_PATH=/app/data/honeypot.db
+      - LOGS_DIR=/app/logs
+      - UPLOAD_DIR=/app/data/uploads
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./next.config.js:/app/next.config.js
+      - ./jsconfig.json:/app/jsconfig.json
+      # Persist database and uploads
+      - ./data:/app/data
+      # Persist logs
+      - ./logs:/app/logs
+      # Exclude node_modules from volume mount
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+

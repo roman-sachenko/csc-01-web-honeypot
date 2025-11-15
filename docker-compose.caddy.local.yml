@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  honeypot-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: truarch-honeypot-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_PATH=/app/data/honeypot.db
+      - LOGS_DIR=/app/logs
+      - UPLOAD_DIR=/app/data/uploads
+    volumes:
+      - ./src:/app/src
+      - ./next.config.js:/app/next.config.js
+      - ./jsconfig.json:/app/jsconfig.json
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - /app/node_modules
+      - /app/.next
+    restart: always
+    command: pnpm dev:server
+    networks:
+      - honeypot-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  honeypot-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: truarch-honeypot-frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - API_HOST=http://honeypot-backend:3000
+    volumes:
+      - ./src:/app/src
+      - ./next.config.js:/app/next.config.js
+      - ./jsconfig.json:/app/jsconfig.json
+      - /app/node_modules
+      - /app/.next
+    restart: always
+    command: pnpm dev:client
+    networks:
+      - honeypot-network
+    depends_on:
+      honeypot-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/', (r) => {process.exit(r.statusCode === 200 || r.statusCode === 404 ? 0 : 1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:latest
+    container_name: truarch-caddy-local
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile
+      - caddy_data_local:/data
+      - caddy_config_local:/config
+      - ./logs:/var/log/caddy
+    networks:
+      - honeypot-network
+    depends_on:
+      honeypot-backend:
+        condition: service_healthy
+      honeypot-frontend:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  honeypot-network:
+    driver: bridge
+
+volumes:
+  caddy_data_local:
+  caddy_config_local:

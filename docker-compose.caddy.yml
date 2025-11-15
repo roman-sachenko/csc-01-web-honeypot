@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: truarch-honeypot
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/honeypot.db
+      - LOGS_DIR=/app/logs
+      - UPLOAD_DIR=/app/data/uploads
+    volumes:
+      # Persist database and uploads
+      - ./data:/app/data
+      # Persist logs
+      - ./logs:/app/logs
+    restart: always
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - honeypot-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:latest
+    container_name: truarch-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # For HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./logs:/var/log/caddy
+    networks:
+      - honeypot-network
+    depends_on:
+      honeypot:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  honeypot-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+

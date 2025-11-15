@@ -1,0 +1,44 @@
+# Development Dockerfile
+FROM node:20-slim
+
+# Install dependencies for native modules and PDF generation
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json ./
+COPY pnpm-lock.yaml* ./
+
+# Install all dependencies (including dev)
+# Use --no-frozen-lockfile to handle lockfile version mismatches in Docker
+RUN pnpm install --no-frozen-lockfile
+
+# Copy application code
+COPY . .
+
+# Create directories for data and logs with proper permissions
+RUN mkdir -p /app/data /app/logs /app/data/uploads && \
+    chmod -R 755 /app/data /app/logs
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV PORT=3000
+ENV DB_PATH=/app/data/honeypot.db
+ENV LOGS_DIR=/app/logs
+ENV UPLOAD_DIR=/app/data/uploads
+
+# Expose ports (backend and frontend)
+EXPOSE 3000 3001
+
+# Start development servers
+CMD ["pnpm", "dev"]
+

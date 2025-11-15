@@ -1,0 +1,35 @@
+# Caddy reverse proxy configuration for TruArch Honeypot
+# Replace example.com with your actual domain
+
+example.com {
+    # Enable logging
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+
+    # Reverse proxy to the honeypot backend (port 3000)
+    # In production, the backend serves the built Next.js frontend
+    reverse_proxy honeypot:3000 {
+        # Preserve original host header
+        header_up Host {host}
+        # Forward real client IP (use {remote} for IP:port, or {remote_host} for IP only)
+        header_up X-Real-IP {remote_host}
+        # Append to X-Forwarded-For if it exists, otherwise set it
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        
+        # Health check
+        health_uri /api/health
+        health_interval 30s
+        health_timeout 5s
+    }
+
+    # Enable compression
+    encode gzip zstd
+}
+
+# HTTP to HTTPS redirect
+http://example.com {
+    redir https://example.com{uri} permanent
+}

@@ -1,0 +1,49 @@
+{
+  "name": "truarch-honeypot",
+  "version": "1.0.0",
+  "description": "Web honeypot for observing real-world attacks",
+  "type": "module",
+  "main": "src/server/index.js",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:client\"",
+    "dev:server": "node --watch src/server/index.js",
+    "dev:client": "next dev -p 3001",
+    "start": "node src/server/index.js",
+    "build": "next build",
+    "start:prod": "node src/server/index.js",
+    "docker:build": "docker build -t truarch-honeypot .",
+    "docker:run": "docker-compose up -d",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:caddy": "docker-compose -f docker-compose.caddy.yml up -d",
+    "docker:caddy:local": "docker-compose -f docker-compose.caddy.local.yml up",
+    "docker:caddy:local:detached": "docker-compose -f docker-compose.caddy.local.yml up -d",
+    "docker:caddy:local:logs": "docker-compose -f docker-compose.caddy.local.yml logs -f"
+  },
+  "keywords": ["honeypot", "security", "research"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/formbody": "^7.4.0",
+    "@fastify/multipart": "^8.0.0",
+    "@fastify/static": "^6.12.0",
+    "sql.js": "^1.10.3",
+    "fastify": "^4.26.0",
+    "next": "^14.2.0",
+    "pdfkit": "^0.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "typescript": "^5.5.0"
+  }
+}
+
