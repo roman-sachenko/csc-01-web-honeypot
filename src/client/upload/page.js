@@ -2,33 +2,28 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { appConfig } from '../config.js';
 
 export default function Upload() {
+  const initials = appConfig.companyName.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase() || "ET";
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
     setResult(null);
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) return;
-
     setLoading(true);
-    setResult(null);
-
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
-
       const data = await response.json();
       setResult({ success: true, data });
       setFile(null);
@@ -45,10 +40,10 @@ export default function Upload() {
       <div className="header">
         <div className="header-top">
           <div className="logo">
-            <div className="logo-icon">TA</div>
+            <div className="logo-icon">{initials}</div>
             <div className="logo-text">
-              <h1>TruArch Technologies</h1>
-              <p>Enterprise Software Architecture & Infrastructure Solutions</p>
+              <h1>{appConfig.companyName}</h1>
+              <p>{appConfig.companyTagline}</p>
             </div>
           </div>
         </div>
@@ -57,7 +52,6 @@ export default function Upload() {
           <Link href="/upload" className="active">Document Upload</Link>
         </nav>
       </div>
-
       <div className="card">
         <h2>Document Upload</h2>
         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>
@@ -81,7 +75,6 @@ export default function Upload() {
             {loading ? 'Uploading...' : 'Upload Document'}
           </button>
         </form>
-
         {result && (
           <div className={result.success ? 'success' : 'error'}>
             {result.success ? (

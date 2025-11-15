@@ -19,15 +19,18 @@ export async function sqliRoutes(fastify, { db, logger }) {
     // Deliberately vulnerable: concatenating user input into SQL
     const sql = `SELECT * FROM users WHERE username LIKE '%${q || ''}%' OR email LIKE '%${q || ''}%'`;
     
-    logger.log('sqli', request, {
-      raw_input: q || '',
-      constructed_sql: sql,
-    });
-
+    let error = null;
     try {
       // Execute the vulnerable query
       const results = db.exec(sql);
       const rows = resultsToObjects(results);
+      
+      // Log once with all data (including success case)
+      logger.log('sqli', request, {
+        raw_input: q || '',
+        constructed_sql: sql,
+        error: null,
+      });
       
       // Return fake/sanitized results (don't expose real passwords)
       return rows.map(user => ({
@@ -36,12 +39,14 @@ export async function sqliRoutes(fastify, { db, logger }) {
         email: user.email,
         role: user.role,
       }));
-    } catch (error) {
-      // Log SQL errors (common in SQL injection attempts)
+    } catch (err) {
+      error = err;
+      // Log once with error information
       logger.log('sqli', request, {
         raw_input: q || '',
         constructed_sql: sql,
         error: error.message,
+        error_name: error.name,
       });
       
       return reply.code(500).send({
@@ -51,43 +56,6 @@ export async function sqliRoutes(fastify, { db, logger }) {
     }
   });
 
-  // Another vulnerable endpoint - user lookup by ID
-  fastify.get('/api/users/:id', async (request, reply) => {
-    const { id } = request.params;
-    
-    // Vulnerable: direct string interpolation
-    const sql = `SELECT * FROM users WHERE id = ${id}`;
-    
-    logger.log('sqli', request, {
-      raw_input: id,
-      constructed_sql: sql,
-    });
-
-    try {
-      const results = db.exec(sql);
-      const rows = resultsToObjects(results);
-      const result = rows[0];
-      
-      if (!result) {
-        return reply.code(404).send({ error: 'User not found' });
-      }
-      
-      return {
-        id: result.id,
-        username: result.username,
-        email: result.email,
-        role: result.role,
-      };
-    } catch (error) {
-      logger.log('sqli', request, {
-        raw_input: id,
-        constructed_sql: sql,
-        error: error.message,
-      });
-      
-      return reply.code(500).send({
-        error: 'Database error',
-      });
-    }
-  });
+  // Note: /api/users/:id is handled by authRoutes for IDOR vulnerability simulation
+  // This file focuses on SQL injection via /api/users/search endpoint
 }

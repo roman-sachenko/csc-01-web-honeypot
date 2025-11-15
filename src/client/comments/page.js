@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { appConfig } from '../config.js';
 
 export default function Comments() {
+  const initials = appConfig.companyName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'ET';
   const [content, setContent] = useState('');
   const [author, setAuthor] = useState('');
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
-
   useEffect(() => {
     loadComments();
   }, []);
-
   const loadComments = async () => {
     try {
       const response = await fetch('/api/comments');
@@ -23,20 +23,16 @@ export default function Comments() {
       console.error('Failed to load comments:', error);
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
-
     try {
       const response = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, author }),
       });
-
-      const data = await response.json();
       setMessage({ success: true, text: 'Note added successfully!' });
       setContent('');
       setAuthor('');
@@ -53,10 +49,10 @@ export default function Comments() {
       <div className="header">
         <div className="header-top">
           <div className="logo">
-            <div className="logo-icon">TA</div>
+            <div className="logo-icon">{initials}</div>
             <div className="logo-text">
-              <h1>TruArch Technologies</h1>
-              <p>Enterprise Software Architecture & Infrastructure Solutions</p>
+              <h1>{appConfig.companyName}</h1>
+              <p>{appConfig.companyTagline}</p>
             </div>
           </div>
         </div>
@@ -65,7 +61,6 @@ export default function Comments() {
           <Link href="/comments" className="active">Project Notes</Link>
         </nav>
       </div>
-
       <div className="card">
         <h2>Project Notes & Documentation</h2>
         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>
@@ -80,8 +75,6 @@ export default function Comments() {
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="Enter your name"
             />
-          </div>
-          <div className="form-group">
             <label>Note Content</label>
             <textarea
               value={content}
@@ -95,13 +88,11 @@ export default function Comments() {
             {loading ? 'Submitting...' : 'Add Note'}
           </button>
         </form>
-
         {message && (
           <div className={message.success ? 'success' : 'error'}>
             {message.text}
           </div>
         )}
-
         <div className="comments-list">
           <h3 style={{ marginTop: '32px', marginBottom: '16px' }}>Recent Notes</h3>
           {comments.length === 0 ? (

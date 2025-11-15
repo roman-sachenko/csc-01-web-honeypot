@@ -14,37 +14,34 @@ export async function chatRoutes(fastify, { db, logger }) {
 
   // Chat endpoint - simulates LLM/assistant that "can access internal data"
   fastify.post('/api/chat', async (request, reply) => {
+    const { message } = request.body || {};
+    const messageLower = (message || '').toLowerCase();
+    
+    // Detect potential prompt injection attempts
+    const injectionPatterns = [
+      'ignore previous',
+      'forget all',
+      'system prompt',
+      'internal data',
+      'admin',
+      'password',
+      'secret',
+      'token',
+      'api key',
+      'show me',
+      'reveal',
+      'execute',
+      'run command',
+    ];
+    
+    const isInjectionAttempt = injectionPatterns.some(pattern => 
+      messageLower.includes(pattern)
+    );
+    
+    let dbError = null;
+    let processingError = null;
+    
     try {
-      const { message } = request.body || {};
-      
-      const messageLower = (message || '').toLowerCase();
-      
-      // Detect potential prompt injection attempts
-      const injectionPatterns = [
-        'ignore previous',
-        'forget all',
-        'system prompt',
-        'internal data',
-        'admin',
-        'password',
-        'secret',
-        'token',
-        'api key',
-        'show me',
-        'reveal',
-        'execute',
-        'run command',
-      ];
-      
-      const isInjectionAttempt = injectionPatterns.some(pattern => 
-        messageLower.includes(pattern)
-      );
-      
-      logger.log('chat', request, {
-        user_message: message || '',
-        is_injection_attempt: isInjectionAttempt,
-      });
-
       // Generate fake response
       let response = 'I understand your request. ';
       
@@ -65,14 +62,17 @@ export async function chatRoutes(fastify, { db, logger }) {
         stmt.run([message || '', response]);
         stmt.free();
         db.save();
-      } catch (dbError) {
-        // Log database errors but don't fail the request
-        logger.log('chat', request, {
-          user_message: message || '',
-          error: 'database_error',
-          error_message: dbError.message,
-        });
+      } catch (err) {
+        dbError = err;
       }
+      
+      // Log once with all data (including any errors)
+      logger.log('chat', request, {
+        user_message: message || '',
+        is_injection_attempt: isInjectionAttempt,
+        error: dbError ? 'database_error' : null,
+        error_message: dbError ? dbError.message : null,
+      });
       
       // Always return valid JSON
       return reply.code(200).send({
@@ -80,9 +80,11 @@ export async function chatRoutes(fastify, { db, logger }) {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      // Log all errors but return a generic response
+      processingError = error;
+      // Log once with error information
       logger.log('chat', request, {
-        user_message: request.body?.message || '',
+        user_message: message || '',
+        is_injection_attempt: isInjectionAttempt,
         error: 'processing_error',
         error_message: error.message,
         error_stack: error.stack,
@@ -98,15 +100,20 @@ export async function chatRoutes(fastify, { db, logger }) {
 
   // Get chat history
   fastify.get('/api/chat/history', async (request, reply) => {
+    let error = null;
     try {
-      logger.log('chat', request);
-
       const results = db.exec('SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT 20');
       const messages = resultsToObjects(results);
       
+      // Log once with all data
+      logger.log('chat', request, {
+        error: null,
+      });
+      
       return reply.code(200).send(messages);
-    } catch (error) {
-      // Log errors but return empty array
+    } catch (err) {
+      error = err;
+      // Log once with error information
       logger.log('chat', request, {
         error: 'history_error',
         error_message: error.message,

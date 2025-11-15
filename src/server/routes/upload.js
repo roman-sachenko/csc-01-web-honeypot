@@ -22,12 +22,24 @@ export async function uploadRoutes(fastify, { db, logger, storageManager, maxFil
     const canStore = storageManager.canStoreFile(fileSize);
     const wasSaved = canStore && fileSize <= maxFileSize;
 
+    // Capture raw file data preview for logging (first 1000 bytes as hex)
+    let rawFilePreview = null;
+    try {
+      if (buffer && buffer.length > 0) {
+        const preview = buffer.slice(0, 1000);
+        rawFilePreview = `[file:${fileSize} bytes] ${preview.toString('hex').substring(0, 2000)}${fileSize > 1000 ? '...' : ''}`;
+      }
+    } catch (e) {
+      rawFilePreview = '[file: could not capture preview]';
+    }
+
     logger.log('upload', request, {
       original_filename: originalFilename,
       mime_type: mimeType,
       file_size: fileSize,
       was_saved: wasSaved,
       total_storage_used: storageManager.getTotalSize(),
+      raw_file_preview: rawFilePreview,
     });
 
     if (wasSaved) {

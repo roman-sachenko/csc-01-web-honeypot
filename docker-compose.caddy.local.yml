@@ -1,19 +1,26 @@
 version: '3.8'
 
 services:
-  honeypot-backend:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: truarch-honeypot-backend
+    container_name: app-backend
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - DB_PATH=/app/data/honeypot.db
+      - DB_PATH=/app/data/app.db
       - LOGS_DIR=/app/logs
       - UPLOAD_DIR=/app/data/uploads
+      - DOMAIN=${DOMAIN:-localhost}
+      - API_HOST=${API_HOST:-http://backend:3000}
+      - CLIENT_HOST=${CLIENT_HOST:-http://localhost:3001}
+      - COMPANY_NAME=${COMPANY_NAME:-Enterprise Technologies}
+      - COMPANY_TAGLINE=${COMPANY_TAGLINE:-Enterprise Software Architecture & Infrastructure Solutions}
+      - COMPANY_EMAIL=${COMPANY_EMAIL:-info@example.com}
+      - COMPANY_WEBSITE=${COMPANY_WEBSITE:-www.example.com}
     volumes:
       - ./src:/app/src
       - ./next.config.js:/app/next.config.js
@@ -23,9 +30,9 @@ services:
       - /app/node_modules
       - /app/.next
     restart: always
-    command: pnpm dev:server
+    command: sh -c "rm -rf app && cp -r src/client app && node --watch src/server/index.js"
     networks:
-      - honeypot-network
+      - app-network
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 10s
@@ -38,16 +45,27 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  honeypot-frontend:
+  client:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: truarch-honeypot-frontend
+    container_name: app-client
     ports:
-      - "3001:3001"
+      - "${CLIENT_PORT:-3001}:${CLIENT_PORT:-3001}"
     environment:
       - NODE_ENV=development
-      - API_HOST=http://honeypot-backend:3000
+      - SHELL=/bin/sh
+      - CLIENT_PORT=${CLIENT_PORT:-3001}
+      - API_HOST=${API_HOST:-http://backend:3000}
+      - DOMAIN=${DOMAIN:-localhost}
+      - COMPANY_NAME=${COMPANY_NAME:-Enterprise Technologies}
+      - COMPANY_TAGLINE=${COMPANY_TAGLINE:-Enterprise Software Architecture & Infrastructure Solutions}
+      - COMPANY_EMAIL=${COMPANY_EMAIL:-info@example.com}
+      - COMPANY_WEBSITE=${COMPANY_WEBSITE:-www.example.com}
+      - NEXT_PUBLIC_COMPANY_NAME=${COMPANY_NAME:-Enterprise Technologies}
+      - NEXT_PUBLIC_COMPANY_TAGLINE=${COMPANY_TAGLINE:-Enterprise Software Architecture & Infrastructure Solutions}
+      - NEXT_PUBLIC_COMPANY_EMAIL=${COMPANY_EMAIL:-info@example.com}
+      - NEXT_PUBLIC_COMPANY_WEBSITE=${COMPANY_WEBSITE:-www.example.com}
     volumes:
       - ./src:/app/src
       - ./next.config.js:/app/next.config.js
@@ -55,14 +73,14 @@ services:
       - /app/node_modules
       - /app/.next
     restart: always
-    command: pnpm dev:client
+    command: sh -c "rm -rf app && cp -r src/client app && if [ ! -f app/page.js ]; then echo '❌ App directory setup failed - page.js not found'; exit 1; fi && echo '✅ App directory verified' && pnpm exec next dev -p ${CLIENT_PORT:-3001}"
     networks:
-      - honeypot-network
+      - app-network
     depends_on:
-      honeypot-backend:
+      backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/', (r) => {process.exit(r.statusCode === 200 || r.statusCode === 404 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -73,9 +91,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  caddy:
+  proxy:
     image: caddy:latest
-    container_name: truarch-caddy-local
+    container_name: app-proxy
     restart: always
     ports:
       - "80:80"
@@ -87,11 +105,11 @@ services:
       - caddy_config_local:/config
       - ./logs:/var/log/caddy
     networks:
-      - honeypot-network
+      - app-network
     depends_on:
-      honeypot-backend:
+      backend:
         condition: service_healthy
-      honeypot-frontend:
+      client:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -100,7 +118,7 @@ services:
         max-file: "3"
 
 networks:
-  honeypot-network:
+  app-network:
     driver: bridge
 
 volumes:

@@ -1,5 +1,5 @@
 # Production Dockerfile
-FROM node:20-slim
+FROM node:24-slim
 
 # Install dependencies for native modules and PDF generation
 RUN apt-get update && apt-get install -y \
@@ -26,7 +26,8 @@ RUN pnpm install --no-frozen-lockfile --prod=false
 COPY . .
 
 # Build Next.js application
-RUN pnpm build
+# Use sh -c to avoid pnpm shell config issues
+RUN sh -c "rm -rf app && cp -r src/client app && pnpm exec next build"
 
 # Create directories for data and logs with proper permissions
 RUN mkdir -p /app/data /app/logs /app/data/uploads && \
@@ -34,7 +35,9 @@ RUN mkdir -p /app/data /app/logs /app/data/uploads && \
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV SHELL=/bin/sh
 ENV PORT=3000
+ENV CLIENT_PORT=3001
 ENV DB_PATH=/app/data/honeypot.db
 ENV LOGS_DIR=/app/logs
 ENV UPLOAD_DIR=/app/data/uploads

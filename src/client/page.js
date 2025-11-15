@@ -1,21 +1,26 @@
 import Link from 'next/link';
+import { appConfig } from './config.js';
 
 export default function Home() {
+  const initials = appConfig.companyName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'ET';
+  
   return (
     <div className="container">
       <div className="header">
         <div className="header-top">
           <div className="logo">
-            <div className="logo-icon">TA</div>
+            <div className="logo-icon">{initials}</div>
             <div className="logo-text">
-              <h1>TruArch Technologies</h1>
-              <p>Enterprise Software Architecture & Infrastructure Solutions</p>
+              <h1>{appConfig.companyName}</h1>
+              <p>{appConfig.companyTagline}</p>
             </div>
           </div>
           <div className="header-badge">Client Portal</div>
         </div>
         <nav className="nav">
           <Link href="/login">Login</Link>
+          <Link href="/admin">Admin Dashboard</Link>
+          <Link href="/users/1392">Profile</Link>
           <Link href="/search">Team Directory</Link>
           <Link href="/comments">Project Notes</Link>
           <Link href="/chat">AI Assistant</Link>
@@ -27,7 +32,7 @@ export default function Home() {
       </div>
 
       <div className="card">
-        <h2>Welcome to TruArch Technologies</h2>
+        <h2>Welcome to {appConfig.companyName}</h2>
         <p style={{ fontSize: '16px', color: 'var(--text-light)', marginBottom: '24px' }}>
           We provide enterprise-grade software architecture solutions, ready-made server infrastructure, 
           and comprehensive consulting services to help companies build scalable, maintainable systems.

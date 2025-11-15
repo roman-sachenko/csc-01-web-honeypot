@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import { config } from '../config.js';
 
 export function generatePDF(outputPath) {
   // Ensure directory exists
@@ -14,8 +15,8 @@ export function generatePDF(outputPath) {
   doc.pipe(stream);
 
   // Header
-  doc.fontSize(24).fillColor('#2563eb').text('TruArch Technologies', { align: 'center' });
-  doc.fontSize(16).fillColor('#64748b').text('Enterprise Software Architecture Solutions', { align: 'center' });
+  doc.fontSize(24).fillColor('#2563eb').text(config.companyName, { align: 'center' });
+  doc.fontSize(16).fillColor('#64748b').text(config.companyTagline, { align: 'center' });
   doc.moveDown(2);
 
   // Title
@@ -24,7 +25,7 @@ export function generatePDF(outputPath) {
 
   // Introduction
   doc.fontSize(12).fillColor('#1e293b').text(
-    'This comprehensive guide outlines best practices for enterprise software architecture, infrastructure design, and scalable system deployments. TruArch Technologies provides ready-made server configurations, infrastructure setup services, and consulting solutions to help organizations build robust, maintainable systems.',
+    `This comprehensive guide outlines best practices for enterprise software architecture, infrastructure design, and scalable system deployments. ${config.companyName} provides ready-made server configurations, infrastructure setup services, and consulting solutions to help organizations build robust, maintainable systems.`,
     { align: 'justify' }
   );
   doc.moveDown();
@@ -79,8 +80,8 @@ export function generatePDF(outputPath) {
 
   // Footer
   doc.moveDown();
-  doc.fontSize(10).fillColor('#64748b').text('TruArch Technologies - Enterprise Software Architecture & Infrastructure Solutions', { align: 'center' });
-  doc.text('www.truarch.tech | info@truarch.tech', { align: 'center' });
+  doc.fontSize(10).fillColor('#64748b').text(`${config.companyName} - ${config.companyTagline}`, { align: 'center' });
+  doc.text(`${config.companyWebsite} | ${config.companyEmail}`, { align: 'center' });
   doc.text('Generated: ' + new Date().toISOString().split('T')[0], { align: 'center' });
   doc.text('Confidential - For Client Use Only', { align: 'center', font: 'Helvetica-Bold' });
 

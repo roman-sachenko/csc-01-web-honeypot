@@ -1,5 +1,5 @@
 # Development Dockerfile
-FROM node:20-slim
+FROM node:24-slim
 
 # Install dependencies for native modules and PDF generation
 RUN apt-get update && apt-get install -y \
@@ -25,20 +25,28 @@ RUN pnpm install --no-frozen-lockfile
 # Copy application code
 COPY . .
 
+# Copy src/client to app directory for Next.js
+# Next.js requires an 'app' directory at the project root
+RUN rm -rf app && cp -r src/client app
+
 # Create directories for data and logs with proper permissions
 RUN mkdir -p /app/data /app/logs /app/data/uploads && \
     chmod -R 755 /app/data /app/logs
 
 # Set environment variables
 ENV NODE_ENV=development
+ENV SHELL=/bin/sh
 ENV PORT=3000
+ENV CLIENT_PORT=3001
 ENV DB_PATH=/app/data/honeypot.db
 ENV LOGS_DIR=/app/logs
 ENV UPLOAD_DIR=/app/data/uploads
 
-# Expose ports (backend and frontend)
+# Expose ports (backend and client)
 EXPOSE 3000 3001
 
 # Start development servers
-CMD ["pnpm", "dev"]
+# Note: We use sh -c to avoid pnpm shell config issues
+# Run commands directly instead of using pnpm scripts
+CMD ["sh", "-c", "cd /app && rm -rf app && cp -r src/client app && pnpm exec concurrently \"node --watch src/server/index.js\" \"pnpm exec next dev -p 3001\""]
 

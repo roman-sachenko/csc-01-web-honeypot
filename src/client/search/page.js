@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { appConfig } from '../config.js';
 
 export default function Search() {
+  const initials = appConfig.companyName.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase() || "ET";
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResults(null);
-
     try {
       const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
@@ -23,16 +23,15 @@ export default function Search() {
       setLoading(false);
     }
   };
-
   return (
     <div className="container">
       <div className="header">
         <div className="header-top">
           <div className="logo">
-            <div className="logo-icon">TA</div>
+            <div className="logo-icon">{initials}</div>
             <div className="logo-text">
-              <h1>TruArch Technologies</h1>
-              <p>Enterprise Software Architecture & Infrastructure Solutions</p>
+              <h1>{appConfig.companyName}</h1>
+              <p>{appConfig.companyTagline}</p>
             </div>
           </div>
         </div>
@@ -41,7 +40,6 @@ export default function Search() {
           <Link href="/search" className="active">Team Directory</Link>
         </nav>
       </div>
-
       <div className="card">
         <h2>Team Directory</h2>
         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>
@@ -61,7 +59,6 @@ export default function Search() {
             {loading ? 'Searching...' : 'Search Team'}
           </button>
         </form>
-
         {results && (
           <div className="result">
             <h3>Search Results:</h3>

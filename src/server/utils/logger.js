@@ -9,7 +9,7 @@ export class Logger {
   constructor(logsDir) {
     // Resolve to absolute path to ensure consistent file location
     this.logsDir = path.resolve(logsDir);
-    this.logFile = path.join(this.logsDir, 'honeypot-requests.log');
+    this.logFile = path.join(this.logsDir, 'app-requests.log');
     
     // Ensure logs directory exists
     if (!fs.existsSync(this.logsDir)) {
@@ -46,6 +46,76 @@ export class Logger {
       safeBody = { _error: 'Could not serialize body' };
     }
 
+    // Capture raw input (raw body before parsing)
+    let rawInput = null;
+    try {
+      if (request.rawBody) {
+        // Limit raw input size for logging (max 50000 chars)
+        if (typeof request.rawBody === 'string') {
+          if (request.rawBody.length > 50000) {
+            rawInput = request.rawBody.substring(0, 50000) + '... [truncated]';
+          } else {
+            rawInput = request.rawBody;
+          }
+        } else if (Buffer.isBuffer(request.rawBody)) {
+          // For binary data, show first 1000 bytes as hex
+          const preview = request.rawBody.slice(0, 1000);
+          rawInput = `[binary:${request.rawBody.length} bytes] ${preview.toString('hex').substring(0, 2000)}${request.rawBody.length > 1000 ? '...' : ''}`;
+        } else {
+          rawInput = String(request.rawBody);
+        }
+      } else if (request.body && request.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+        // For form-urlencoded, reconstruct raw input from parsed body
+        try {
+          const formData = Object.entries(request.body || {})
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+            .join('&');
+          rawInput = formData;
+        } catch (e) {
+          rawInput = null;
+        }
+      }
+    } catch (e) {
+      rawInput = { _error: 'Could not capture raw input' };
+    }
+
+    // Capture raw query string
+    let rawQuery = null;
+    try {
+      if (request.url && request.url.includes('?')) {
+        rawQuery = request.url.split('?')[1];
+        // Limit query string size
+        if (rawQuery.length > 10000) {
+          rawQuery = rawQuery.substring(0, 10000) + '... [truncated]';
+        }
+      }
+    } catch (e) {
+      rawQuery = null;
+    }
+
+    // Capture ALL headers (important for detecting attacks in headers)
+    // Headers can contain attack payloads (e.g., XSS in User-Agent, SQL injection in custom headers)
+    let allHeaders = {};
+    try {
+      // Fastify normalizes headers to lowercase, but we want to preserve original case if possible
+      // Iterate through all headers and capture them
+      if (request.headers) {
+        for (const [key, value] of Object.entries(request.headers)) {
+          // Limit individual header value size (max 10000 chars per header)
+          if (typeof value === 'string') {
+            allHeaders[key] = value.length > 10000 ? value.substring(0, 10000) + '... [truncated]' : value;
+          } else if (Array.isArray(value)) {
+            // Handle array headers (e.g., multiple Set-Cookie headers)
+            allHeaders[key] = value.map(v => typeof v === 'string' && v.length > 10000 ? v.substring(0, 10000) + '... [truncated]' : v);
+          } else {
+            allHeaders[key] = String(value);
+          }
+        }
+      }
+    } catch (e) {
+      allHeaders = { _error: 'Could not capture headers' };
+    }
+
     const logEntry = {
       timestamp: new Date().toISOString(),
       feature,
@@ -53,12 +123,10 @@ export class Logger {
       method: request.method,
       path: request.url,
       query: request.query || {},
-      headers: {
-        'user-agent': request.headers['user-agent'] || '',
-        'referer': request.headers['referer'] || '',
-        'content-type': request.headers['content-type'] || '',
-      },
+      headers: allHeaders,
       body: safeBody,
+      raw_input: rawInput,
+      raw_query: rawQuery,
       ...additionalData,
     };
 

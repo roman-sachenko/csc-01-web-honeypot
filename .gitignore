@@ -3,6 +3,11 @@ node_modules/
 .pnp
 .pnp.js
 
+# Symlink for Next.js (app -> src/client)
+# Note: app is a symlink to src/client for Next.js compatibility
+# Next.js requires 'app' directory name at root, but we use 'client' in our codebase
+app
+
 # Production / Build
 .next/
 out/

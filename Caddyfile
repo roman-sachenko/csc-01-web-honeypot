@@ -1,28 +1,66 @@
-# Caddy reverse proxy configuration for TruArch Honeypot
-# Replace example.com with your actual domain
+# Caddy reverse proxy configuration
+# Domain is set via DOMAIN environment variable (required)
+# Usage: Set DOMAIN environment variable before starting
 
-example.com {
+{$DOMAIN} {
     # Enable logging
     log {
         output file /var/log/caddy/access.log
         format json
     }
 
-    # Reverse proxy to the honeypot backend (port 3000)
-    # In production, the backend serves the built Next.js frontend
-    reverse_proxy honeypot:3000 {
-        # Preserve original host header
-        header_up Host {host}
-        # Forward real client IP (use {remote} for IP:port, or {remote_host} for IP only)
-        header_up X-Real-IP {remote_host}
-        # Append to X-Forwarded-For if it exists, otherwise set it
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-        
-        # Health check
-        health_uri /api/health
-        health_interval 30s
-        health_timeout 5s
+    # Route API endpoints to backend first
+    @api {
+        path /api/*
+    }
+    handle @api {
+        reverse_proxy backend:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            health_uri /api/health
+            health_interval 30s
+            health_timeout 5s
+        }
+    }
+
+    # Route static/honeypot endpoints to backend
+    # These must be handled by backend routes before Next.js
+    # Match each static file path explicitly
+    @static_files {
+        path /.env
+        path /.well-known/*
+        path /robots.txt
+        path /sitemap.xml
+    }
+    handle @static_files {
+        reverse_proxy backend:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Reverse proxy all other routes to the backend
+    # In production, the backend serves the built Next.js client
+    handle {
+        reverse_proxy backend:3000 {
+            # Preserve original host header
+            header_up Host {host}
+            # Forward real client IP (use {remote} for IP:port, or {remote_host} for IP only)
+            header_up X-Real-IP {remote_host}
+            # Append to X-Forwarded-For if it exists, otherwise set it
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Health check
+            health_uri /api/health
+            health_interval 30s
+            health_timeout 5s
+        }
     }
 
     # Enable compression
@@ -30,6 +68,6 @@ example.com {
 }
 
 # HTTP to HTTPS redirect
-http://example.com {
-    redir https://example.com{uri} permanent
+http://{$DOMAIN} {
+    redir https://{$DOMAIN}{uri} permanent
 }

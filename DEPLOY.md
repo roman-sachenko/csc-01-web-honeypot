@@ -84,20 +84,26 @@ mkdir -p data logs data/uploads
 chmod -R 755 data logs
 ```
 
-### Update Caddyfile with Your Domain
+### Set Your Domain (Two Options)
+
+**Option 1: Using Environment Variable (Recommended)**
+
+```bash
+# Set DOMAIN environment variable
+export DOMAIN=yourdomain.com
+
+# Or create a .env file (gitignored)
+echo "DOMAIN=yourdomain.com" > .env
+```
+
+**Option 2: Edit Caddyfile Directly**
 
 ```bash
 # Edit Caddyfile
 nano Caddyfile
 ```
 
-Replace `example.com` with your actual domain:
-
-```caddy
-yourdomain.com {
-    # ... rest of config stays the same
-}
-```
+The Caddyfile uses `{$DOMAIN}` which requires the `DOMAIN` environment variable to be set.
 
 **Important:** Make sure your domain DNS is pointing to this server's IP before proceeding!
 

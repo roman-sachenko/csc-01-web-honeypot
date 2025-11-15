@@ -1,300 +1,342 @@
-# TruArch Technologies - Web Honeypot
+# Web Honeypot - Security Research Project
 
-**⚠️ WARNING: This is a research honeypot designed to attract and log attacks. DO NOT use this in production or expose it to the internet without proper isolation and monitoring.**
+> **⚠️ IMPORTANT DISCLAIMER:** This is a **TEST/EXPERIMENTAL** honeypot project designed for security research and educational purposes. It is **NOT** intended for production use. This project was developed with an experimental approach to study attack patterns and vulnerabilities.
 
 ## Overview
 
-This is a deliberately vulnerable web application built with Fastify (backend) and Next.js (frontend) to observe and log real-world attack patterns. The honeypot intentionally exposes common web vulnerabilities in a controlled, safe manner for security research purposes.
+This project is a comprehensive web application honeypot designed to attract, log, and analyze various types of cyber attacks. It simulates a vulnerable web application with multiple attack surfaces to capture and study malicious behavior patterns.
 
-## Features
+## Purpose
 
-The honeypot implements the following vulnerability categories:
+This honeypot serves as a security research tool to:
+- **Study attack patterns**: Observe and log various types of cyber attacks in real-time
+- **Educational purposes**: Learn about common web vulnerabilities and attack vectors
+- **Security research**: Analyze attacker behavior, tools, and techniques
+- **Threat intelligence**: Collect data on emerging threats and attack methodologies
 
-### 1. Insecure Authentication
-- Login endpoint that always fails (attracts brute-force attempts)
-- Fake user profile and admin endpoints
-- All login attempts are logged with credentials
+## ⚠️ Security Warning
 
-### 2. SQL Injection Honeypot
-- User search functionality vulnerable to SQL injection
-- Direct string concatenation in SQL queries (no prepared statements)
-- Logs all SQL injection attempts with raw input and constructed queries
+**DO NOT USE THIS IN PRODUCTION ENVIRONMENTS**
 
-### 3. XSS (Cross-Site Scripting) Honeypot
-- Comment system that stores and renders user input without escaping
-- Profile update endpoints vulnerable to stored/reflected XSS
-- Logs all XSS payloads and their sources
+- This application intentionally exposes vulnerable endpoints
+- All secrets, tokens, and credentials are **FAKE** and prefixed with `TEST_`
+- The application is designed to be compromised for research purposes
+- Never deploy this on networks containing sensitive data
+- Always run in isolated, controlled environments
 
-### 4. Fake Chat / LLM Prompt Injection
-- Chat interface that simulates an AI assistant
-- Designed to attract prompt injection attempts
-- Logs all messages, especially those containing injection patterns
+## Capabilities & Emulated Vulnerabilities
 
-### 5. File Upload Honeypot
-- File upload endpoint with storage limits:
-  - Maximum 2 MB per file
-  - Total storage limit of 200 MB
-- Once limit is reached, files are logged but not stored
-- Logs all upload attempts with metadata
+This honeypot emulates the following attack surfaces:
 
-### 6. PDF Download Endpoint
-- Serves a static PDF document
-- Attracts generic crawling and download probing
-- Logs all download requests
+### 1. **SQL Injection (SQLi)**
+- Multiple endpoints vulnerable to SQL injection
+- Logs injection attempts with full query details
+- Simulates database interactions
 
-### 7. Command Injection Simulation
-- Endpoint that appears to execute system commands
-- **Never actually executes commands** - only simulates and logs
-- Attracts command injection payloads safely
+### 2. **Cross-Site Scripting (XSS)**
+- Reflected XSS endpoints
+- Stored XSS simulation
+- Logs all XSS payload attempts
 
-### 8. SSRF-Style URL Fetcher
-- Endpoint that appears to fetch data from external URLs
-- **Never makes real network requests** - only simulates and logs
-- Detects and logs SSRF attempts (e.g., metadata endpoints, internal IPs)
+### 3. **Command Injection**
+- Command execution endpoints
+- Simulates shell command execution
+- Logs command injection attempts
 
-### 9. Additional Attractors
-- HTML comments hinting at admin paths and debug modes
-- Fake references to backup files and environment variables
-- Realistic-looking internal portal interface
+### 4. **File Upload Vulnerabilities**
+- File upload endpoints
+- Logs file upload attempts with content analysis
+- Simulates file processing
 
-## Security Posture
+### 5. **Server-Side Request Forgery (SSRF)**
+- URL fetching endpoints
+- Logs SSRF attempts
+- Simulates internal network access
 
-**This honeypot is intentionally insecure at the application level**, but includes safety measures:
+### 6. **Sensitive File Exposure**
+- `.env` file endpoints
+- `.git/config` exposure
+- Database file access attempts
+- Configuration file endpoints
+- AWS credentials endpoints
+- Backup file endpoints
 
-✅ **Safe:**
-- No actual shell command execution
-- No real outbound HTTP requests to attacker-controlled URLs
-- No arbitrary file reading from disk
-- All dangerous operations are simulated and logged only
+### 7. **Authentication Bypass**
+- Admin panel login attempts
+- User authentication endpoints
+- Session management simulation
 
-❌ **Intentionally Vulnerable:**
-- SQL injection vulnerabilities
-- XSS vulnerabilities
-- Insecure authentication
-- Command injection simulation
-- SSRF simulation
+### 8. **Insecure Direct Object Reference (IDOR)**
+- User profile endpoints accessible by ID
+- `/api/users/:id` endpoint allows accessing any user profile
+- Logs all IDOR attempts with requested user IDs
 
-## Installation
+### 9. **Path Traversal**
+- File download endpoint accepts file path parameter
+- Simulates path traversal attempts (e.g., `../../../etc/passwd`)
+- Logs traversal attempts but always serves safe dummy files
+- Never actually accesses filesystem based on client input
 
-### Prerequisites
+### 10. **API Endpoints**
+- RESTful API endpoints
+- GraphQL-like endpoints
+- API key validation attempts
 
-- Node.js v20 or later
-- pnpm package manager
-- Docker and Docker Compose (for containerized deployment)
+## Architecture
 
-### Local Development Setup
-
-1. Install dependencies:
-```bash
-pnpm install
+```
+┌─────────────┐
+│   Caddy     │  Reverse Proxy (HTTPS/HTTP)
+│  (Port 80)  │
+└──────┬──────┘
+       │
+       ├──────────────┬──────────────┐
+       │              │              │
+┌──────▼──────┐ ┌─────▼─────┐ ┌─────▼─────┐
+│   Backend   │ │   Client  │ │   Logs    │
+│  (Fastify)  │ │  (Next.js)│ │  Storage  │
+│  Port 3000  │ │ Port 3001 │ │           │
+└─────────────┘ └───────────┘ └───────────┘
 ```
 
-2. The application will automatically:
-   - Create the `data/` directory for SQLite database and uploads
-   - Create the `logs/` directory for request logs
-   - Initialize the database with fake user data
-   - Generate the PDF document on first run
+## Technology Stack
 
-## Running
-
-### Local Development Mode
-
-Run both backend and frontend concurrently:
-```bash
-pnpm dev
-```
-
-This starts:
-- Backend server on `http://localhost:3000`
-- Frontend (Next.js) on `http://localhost:3001`
-
-### Docker Development Mode
-
-Run with Docker Compose for development (with hot reload):
-```bash
-pnpm docker:dev
-# or
-docker-compose -f docker-compose.dev.yml up
-```
-
-This will:
-- Build the development Docker image
-- Start both backend and frontend with hot reload
-- Mount volumes for data and logs persistence
-- Expose ports 3000 (backend) and 3001 (frontend)
-
-### Docker Production Mode
-
-1. Build and run with Docker Compose:
-```bash
-pnpm docker:build
-pnpm docker:run
-# or
-docker-compose up -d
-```
-
-2. View logs:
-```bash
-pnpm docker:logs
-# or
-docker-compose logs -f
-```
-
-3. Stop the container:
-```bash
-pnpm docker:stop
-# or
-docker-compose down
-```
-
-### Local Production Mode
-
-1. Build the frontend:
-```bash
-pnpm build
-```
-
-2. Start the server:
-```bash
-pnpm start
-# or use the start script
-chmod +x start.sh
-./start.sh
-```
-
-### Docker Deployment to Cloud
-
-The Docker setup is configured for cloud deployment with persistent volumes:
-
-1. **Build the image:**
-```bash
-docker build -t truarch-honeypot .
-```
-
-2. **Run with persistent volumes:**
-```bash
-docker run -d \
-  --name truarch-honeypot \
-  -p 3000:3000 \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/logs:/app/logs \
-  --restart unless-stopped \
-  truarch-honeypot
-```
-
-3. **Or use docker-compose (recommended):**
-```bash
-docker-compose up -d
-```
-
-The volumes ensure:
-- Database (`data/honeypot.db`) persists across restarts
-- Uploaded files (`data/uploads/`) are preserved
-- Logs (`logs/`) are retained for analysis
-
-**Important for Cloud Deployment:**
-- Ensure the `data/` and `logs/` directories exist and have proper permissions
-- Consider using cloud storage volumes (AWS EBS, Google Persistent Disk, etc.) for production
-- Set up log rotation or external log aggregation for long-term storage
-
-### Reverse Proxy with Caddy
-
-For production deployment with automatic HTTPS, see [CADDY.md](./CADDY.md) for Caddy reverse proxy setup.
-
-Quick start:
-```bash
-# Update Caddyfile with your domain
-# Then start with Caddy
-docker-compose -f docker-compose.caddy.yml up -d
-```
-
-## Configuration
-
-Environment variables (optional):
-
-- `PORT` - Backend server port (default: 3000)
-- `DB_PATH` - SQLite database path (default: `./data/honeypot.db`)
-- `LOGS_DIR` - Logs directory (default: `./logs`)
-- `UPLOAD_DIR` - File upload directory (default: `./data/uploads`)
-
-## Logging
-
-All requests are logged to `logs/honeypot-requests.log` in line-delimited JSON format. Each log entry includes:
-
-- Timestamp
-- Remote IP (honors `X-Forwarded-For` header)
-- HTTP method and path
-- Query parameters
-- Request headers (User-Agent, Referer, etc.)
-- Request body
-- Feature/category tag (e.g., `login`, `sqli`, `xss`, `upload`, etc.)
-- Additional metadata specific to each vulnerability type
-
-### Example Log Entry
-
-```json
-{
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "feature": "sqli",
-  "ip": "192.168.1.100",
-  "method": "GET",
-  "path": "/api/users/search",
-  "query": {"q": "admin' OR '1'='1"},
-  "headers": {
-    "user-agent": "Mozilla/5.0...",
-    "referer": ""
-  },
-  "raw_input": "admin' OR '1'='1",
-  "constructed_sql": "SELECT * FROM users WHERE username LIKE '%admin' OR '1'='1%'"
-}
-```
+- **Backend**: Node.js 24 LTS, Fastify
+- **Client**: Next.js 14, React 18
+- **Reverse Proxy**: Caddy (automatic HTTPS with Let's Encrypt)
+- **Database**: SQL.js (in-memory SQLite)
+- **Logging**: Custom file-based logger
+- **API Documentation**: Swagger/OpenAPI
 
 ## Project Structure
 
 ```
 .
 ├── src/
-│   ├── server/           # Backend (Fastify)
-│   │   ├── routes/       # Route handlers for each vulnerability
-│   │   ├── utils/        # Utilities (logger, db, storage, PDF generator)
-│   │   ├── config.js     # Configuration
-│   │   └── index.js      # Server entry point
-│   └── app/              # Frontend (Next.js)
-│       ├── page.js       # Home page
-│       ├── login/        # Login page
-│       ├── search/       # User search
-│       ├── comments/     # Comments/XSS
-│       ├── chat/         # Chat assistant
-│       ├── upload/       # File upload
-│       ├── download/     # PDF download
-│       ├── execute/      # Command execution
-│       └── fetch/        # URL fetcher
-├── data/                 # SQLite DB and uploads (gitignored)
-├── logs/                 # Request logs (gitignored)
-└── package.json
+│   ├── server/          # Backend server code
+│   │   ├── config/      # Configuration files
+│   │   ├── routes/      # API route handlers
+│   │   └── utils/       # Utility functions
+│   └── client/          # Client Next.js application
+├── tests/               # Test files
+├── data/                # Database and uploads (gitignored)
+├── logs/                # Application logs (gitignored)
+├── docker-compose.*.yml # Docker Compose configurations
+└── Caddyfile            # Caddy reverse proxy configuration
 ```
 
-## Analysis
+## Getting Started
 
-To analyze the captured logs, you can use tools like:
+### Prerequisites
 
-- `jq` for JSON parsing: `cat logs/honeypot-requests.log | jq '.feature' | sort | uniq -c`
-- Custom scripts to parse and categorize attacks
-- Log analysis tools (ELK stack, Splunk, etc.)
+- Node.js 24 LTS or higher
+- pnpm package manager
+- Docker and Docker Compose (for containerized deployment)
 
-## Important Notes
+### Installation
 
-1. **This is a honeypot** - It's designed to be attacked. Never use this code as a reference for secure application development.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd 01-web-honeypot
+   ```
 
-2. **Isolation** - If deploying publicly, ensure the honeypot is properly isolated from your network and other systems.
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-3. **Monitoring** - Monitor the logs regularly to detect and analyze attack patterns.
+3. **Set environment variables** (optional)
+   ```bash
+   export DOMAIN=your-domain.com
+   export COMPANY_NAME="Your Company"
+   export COMPANY_EMAIL="info@yourcompany.com"
+   ```
 
-4. **Legal** - Ensure you have the right to deploy honeypots in your jurisdiction and network.
+### Development
 
-5. **Domain** - The frontend is styled for `truarch.tech` domain, but can be customized.
+**Local Development (without Docker)**
+```bash
+# Start both server and client
+pnpm dev
+
+# Or start separately
+pnpm dev:server  # Backend on port 3000
+pnpm dev:client  # Client on port 3001
+```
+
+**Local Development (with Docker)**
+```bash
+# Start with Caddy reverse proxy
+pnpm docker:caddy:local
+
+# View logs
+pnpm docker:caddy:local:logs
+```
+
+### Production Deployment
+
+**With Docker Compose and Caddy (Automatic HTTPS)**
+```bash
+# Set your domain
+export DOMAIN=your-domain.com
+
+# Start production stack
+pnpm docker:caddy
+
+# View logs
+docker-compose -f docker-compose.caddy.yml logs -f
+```
+
+The production setup includes:
+- Automatic HTTPS with Let's Encrypt
+- Health checks and automatic restarts
+- Log rotation
+- Persistent data storage
+
+## Configuration
+
+All configuration is done via environment variables:
+
+### Server Configuration
+- `PORT` - Backend server port (default: 3000)
+- `CLIENT_PORT` - Client server port (default: 3001)
+- `PROXY_PORT` - Reverse proxy HTTP port (default: 80)
+- `PROXY_PORT_HTTPS` - Reverse proxy HTTPS port (default: 443)
+- `DOMAIN` - Domain name for production (required for HTTPS)
+- `DB_PATH` - Database file path
+- `LOGS_DIR` - Logs directory path
+- `UPLOAD_DIR` - File upload directory
+
+### Company Branding
+- `COMPANY_NAME` - Company name
+- `COMPANY_TAGLINE` - Company tagline
+- `COMPANY_EMAIL` - Company email
+- `COMPANY_WEBSITE` - Company website
+
+### API Configuration
+- `API_HOST` - Backend API host URL
+- `CLIENT_HOST` - Client host URL
+
+## Client-Side Features
+
+### Admin Dashboard
+- **Route**: `/admin`
+- Admin login form that attempts authentication
+- Logs all admin login attempts
+- Accessible from the main navigation
+
+### User Profile Pages
+- **Route**: `/users/:id`
+- Displays user profile information by ID
+- Simulates IDOR vulnerability (Insecure Direct Object Reference)
+- Allows attackers to try accessing different user profiles by changing the ID
+- All access attempts are logged
+
+### File Download
+- **Route**: `/download`
+- Accepts file path as query parameter: `/api/download?file=path/to/file`
+- Simulates path traversal vulnerability
+- Logs path traversal attempts (e.g., `../../../etc/passwd`)
+- Always serves safe dummy files, never accesses actual filesystem
+
+## API Documentation
+
+Once the server is running, access the interactive API documentation:
+
+- **Swagger UI**: `http://localhost:3000/api/docs`
+- **Swagger JSON**: `http://localhost:3000/api/docs/json`
+
+## Test Data
+
+The application automatically initializes test user data on server start:
+- **10 test users** with various roles (admin, manager, engineer, user, etc.)
+- Users are **upserted** on every server start (ensures consistent IDs)
+- All user IDs are **auto-incremented** for predictable testing
+- User data includes: username, password, email, role, created_at
+
+Test users include:
+- `admin` (admin role)
+- `client_manager` (manager role)
+- `devops_lead` (engineer role)
+- `architect` (architect role)
+- `client_user` (client role)
+- `john_doe`, `jane_smith`, `bob_wilson`, `alice_brown`, `charlie_davis` (user role)
+
+## Logging
+
+All requests are logged to:
+- **File**: `logs/app-requests.log`
+- **Console**: Detailed request information for debugging
+
+Log entries include:
+- Timestamp
+- IP address
+- Request method and path
+- Query parameters
+- Request headers
+- Request body (raw and parsed)
+- Response status
+- Attack detection flags
+- Path traversal detection
+- IDOR attempt tracking
+
+## Testing
+
+Run the test suite:
+```bash
+pnpm test
+```
+
+Tests cover:
+- All API endpoints (health, auth, admin, users, download, etc.)
+- Path traversal simulation (`../../../etc/passwd`, Windows paths)
+- IDOR vulnerability simulation (user profile access)
+- Admin login attempts
+- File download with various path parameters
+- Expected responses and error handling
+
+All tests verify that:
+- Endpoints respond correctly
+- Path traversal attempts are logged but not executed
+- IDOR attempts are logged
+- No actual vulnerabilities are exposed (only simulated)
+
+## Code Quality
+
+- **Format code**: `pnpm format`
+- **Check formatting**: `pnpm format:check`
+- **Lint code**: `pnpm lint`
+
+## Security Considerations
+
+1. **Isolation**: Always run in isolated environments
+2. **Network**: Use separate network segments
+3. **Monitoring**: Monitor all network traffic
+4. **Logs**: Regularly review and analyze logs
+5. **Updates**: Keep dependencies updated
+6. **Secrets**: All fake secrets are prefixed with `TEST_`
+
+## Fake Secrets
+
+All secrets, tokens, and credentials in this honeypot are **FAKE** and clearly marked with the `TEST_` prefix. They are stored in `src/server/config/fake-secrets.js` for centralized management.
+
+## Contributing
+
+This is an experimental research project. Contributions should focus on:
+- Improving attack detection
+- Adding new vulnerability simulations
+- Enhancing logging capabilities
+- Documentation improvements
 
 ## License
 
-MIT
+MIT License - See LICENSE file for details
 
+## Disclaimer
+
+This software is provided "as is" for educational and research purposes only. The authors and contributors are not responsible for any misuse or damage caused by this software. Use at your own risk.
+
+---
+
+**Remember**: This is a honeypot designed to attract attacks. Never deploy on production systems or networks with sensitive data.

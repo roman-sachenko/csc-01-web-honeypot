@@ -1,8 +1,9 @@
 import './globals.css';
+import { appConfig } from './config.js';
 
 export const metadata = {
-  title: 'TruArch Technologies - Enterprise Software Architecture Solutions',
-  description: 'Client portal for TruArch Technologies - Enterprise software architecture, infrastructure solutions, and consulting services',
+  title: `${appConfig.companyName} - ${appConfig.companyTagline}`,
+  description: `Client portal for ${appConfig.companyName} - Enterprise software architecture, infrastructure solutions, and consulting services`,
 };
 
 export default function RootLayout({ children }) {

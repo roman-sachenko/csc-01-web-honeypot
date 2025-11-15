@@ -1,19 +1,26 @@
 version: '3.8'
 
 services:
-  honeypot:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: truarch-honeypot
+    container_name: app-backend
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DB_PATH=/app/data/honeypot.db
+      - DB_PATH=/app/data/app.db
       - LOGS_DIR=/app/logs
       - UPLOAD_DIR=/app/data/uploads
+      - DOMAIN=${DOMAIN:-localhost}
+      - API_HOST=${API_HOST:-http://backend:3000}
+      - CLIENT_HOST=${CLIENT_HOST:-http://localhost:3001}
+      - COMPANY_NAME=${COMPANY_NAME:-Enterprise Technologies}
+      - COMPANY_TAGLINE=${COMPANY_TAGLINE:-Enterprise Software Architecture & Infrastructure Solutions}
+      - COMPANY_EMAIL=${COMPANY_EMAIL:-info@example.com}
+      - COMPANY_WEBSITE=${COMPANY_WEBSITE:-www.example.com}
     volumes:
       # Persist database and uploads
       - ./data:/app/data
@@ -27,30 +34,32 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - honeypot-network
+      - app-network
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-  caddy:
+  proxy:
     image: caddy:latest
-    container_name: truarch-caddy
+    container_name: app-proxy
     restart: always
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"  # For HTTP/3
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
       - ./logs:/var/log/caddy
     networks:
-      - honeypot-network
+      - app-network
     depends_on:
-      honeypot:
+      backend:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -59,7 +68,7 @@ services:
         max-file: "3"
 
 networks:
-  honeypot-network:
+  app-network:
     driver: bridge
 
 volumes:
